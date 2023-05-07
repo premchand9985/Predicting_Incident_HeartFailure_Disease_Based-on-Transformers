@@ -1,182 +1,156 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr  13 09:12:05 2023
+Created on Wed Apr  5 10:12:16 2023
 
 @author: premchand
 """
 
-import numpy as np
-import pandas as pd
+import re
+
+from sklearn.preprocessing import MinMaxScaler
+
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+
+from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
-import matplotlib.pyplot as plt
-from sklearn import metrics
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_predict
 
 
-# Load the dataset
-heart_data = pd.read_csv('framingham.csv')
+import numpy as np
 
-# Display the first 5 rows
-heart_data.head()
 
-# Display the last 5 rows
-heart_data.tail()
+import pandas as pd
 
-# Display the shape of the dataset
-heart_data.shape
+import os, sys, argparse
 
-# Display dataset information
-heart_data.info()
+from matplotlib import pyplot as plt
 
-# Display the number of missing values for each column
-heart_data.isnull().sum()
+models = [LogisticRegression(solver='lbfgs', max_iter=1000),  GaussianNB(),  DecisionTreeClassifier(), KNeighborsClassifier()]
 
-# Display summary statistics
-heart_data.describe()
+DATA_DIR = "heart.csv"
 
-# Separate features (X) and target (Y) variables
-X = heart_data.drop('TenYearCHD', axis=1)
-Y = heart_data['TenYearCHD']
+def get_data(data_dir):
+    df = pd.read_csv(data_dir)
 
-# Fill missing values with column means
-X = X.apply(lambda x: x.fillna(x.mean()), axis=0)
+    male = df.loc[df.sex == 1]
+    female = df.loc[df.sex == 0]
 
-# Check if there are any missing values left
-X.isnull().sum(axis=0)
+    return df, male, female
 
-print(X)
-print(Y)
 
-# Split the dataset into training and testing sets
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, stratify=Y, random_state=2)
+def disease_percents(patients):
+    wit = patients[patients.target == 1]
+    without = patients[patients.target == 0]
 
-# Print the shapes of the original, training, and testing datasets
-print(X.shape, X_train.shape, X_test.shape)
+    wit = (len(wit)/len(patients)) * 100
+    without = (len(without)/len(patients)) * 100
 
-# Instantiate the Logistic Regression model
-logreg_model = LogisticRegression()
+    return wit, without
 
-# Train the model on the training set
-logreg_model.fit(X_train, Y_train)
+def numb_sex(males, females, total):
+    numbMales = (len(males)/len(total))*100
+    numbFemales = (len(females)/len(total))*100
 
-# Make predictions on the training set
-X_train_preds = logreg_model.predict(X_train)
-training_accuracy = accuracy_score(X_train_preds, Y_train)
+    return numbMales, numbFemales
 
-# Print the training set accuracy
-print('Accuracy: ', training_accuracy)
+def create_sets(data):
+    x = data.drop('target', axis=1)
+    y = data.target
 
-# Make predictions on the test set
-X_test_preds = logreg_model.predict(X_test)
-test_accuracy = accuracy_score(X_test_preds, Y_test)
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    X_split = scaler.fit_transform(x)
+    X_train, X_test, y_train, y_test = train_test_split(X_split, y, test_size=0.3)
 
-# Print the test set accuracy
-print('Accuracy on test data : ', test_accuracy)
+    array = data.values
+    X = array[:,0:13]
+    print(X)
+    Y = array[:,13]
 
-# Import additional metrics for model evaluation
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc
+    return X_train, X_test, y_train, y_test, X, Y
 
-# Print the classification report for Logistic Regression
-print('Classification Report is: \n \n', classification_report(Y_test, X_test_preds))
 
-# Print the accuracy score for Logistic Regression
-print('The accuracy score is:', accuracy_score(Y_test, X_test_preds))
+def train(x_train, x_test, y_train, y_test, X, Y, models):
+    for x in models:
+        print('{}'.format(x))
+        model = x
+        model.fit(x_train, y_train)
+        predictions = model.predict(x_test)
+        print('Confusion Matrix :')
+        print(confusion_matrix(y_test, predictions))
+        print('Accuracy Score :', accuracy_score(y_test, predictions))
+        print('Report : ')
+        print(classification_report(y_test, predictions))
 
-# Print the confusion matrix for Logistic Regression
-cm_logreg = confusion_matrix(Y_test, X_test_preds)
-print('\n Confusion matrix \n \n', cm_logreg)
+        kfold = KFold(n_splits=10, random_state=7)
 
-# Print the classification report for Logistic Regression
-print(classification_report(Y_test, X_test_preds))
+        print(cross_val_predict(model, X, Y, cv=kfold))
 
-# Plot the confusion matrix for Logistic Regression using the old method
-#plot_confusion_matrix(logreg_model, X_test, Y_test)
-plt.show()
+        result = cross_val_score(model, X, Y, cv=kfold, scoring='accuracy')
+        print(result)
+        print("Accuracy: %.3f%% (%.3f%%)" % (result.mean() * 100.0, result.std() * 100.0))
 
-# Plot the confusion matrix for Logistic Regression using the new method
-disp_logreg = ConfusionMatrixDisplay(cm_logreg, display_labels=logreg_model.classes_)
-disp_logreg.plot()
-plt.show()
+def plot(data):
+    pd.crosstab(data.cp, data.target).plot(kind ="bar")
+    plt.title('Heart Disease Frequency According To CP')
+    plt.xlabel('CP')
+    plt.xticks(rotation=0)
+    plt.legend(["Haven't Disease", "Have Disease"])
+    plt.ylabel('Frequency of Disease or Not')
 
-# Calculate and print the area under the ROC curve for Logistic Regression
-roc_auc_logreg = metrics.roc_auc_score(Y_test, X_test_preds)
-print(roc_auc_logreg)
+    pd.crosstab(data.fbs, data.target).plot(kind="bar")
+    plt.title('fbs')
+    plt.xlabel('fasting blood sugar > 120 mg/dl) (1 = true; 0 = false)')
+    plt.xticks(rotation=0)
+    plt.legend(["Haven't Disease", "Have Disease"])
+    plt.ylabel('Frequency of Disease or Not')
 
-# Plot the ROC curve for Logistic Regression
-plt.figure(figsize=(10,8))
-probas_logreg = logreg_model.predict_proba(X_test)
-fpr_logreg, tpr_logreg, thresholds_logreg = roc_curve(Y_test, probas_logreg[:, 1])
-roc_auc_logreg = auc(fpr_logreg, tpr_logreg)
+    pd.crosstab(data.exang, data.target).plot(kind="bar")
+    plt.title('exercise induced angina')
+    plt.xlabel('exercise induced angina (1 = yes; 0 = no)')
+    plt.xticks(rotation=0)
+    plt.legend(["Haven't Disease", "Have Disease"])
+    plt.ylabel('Frequency of Disease or Not')
 
-plt.plot(fpr_logreg, tpr_logreg, lw=1, label='ROC fold (area = %0.2f)' % (roc_auc_logreg))
-plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Random')
-plt.xlim([-0.05, 1.05])
-plt.ylim([-0.05, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Receiver operating characteristic example')
-plt.legend(loc="lower right")
-plt.show()
+    pd.crosstab(data.slope, data.target).plot(kind="bar")
+    plt.title('slope of the peak exercise ST')
+    plt.xlabel('the slope of the peak exercise ST segment')
+    plt.xticks(rotation=0)
+    plt.legend(["Haven't Disease", "Have Disease"])
+    plt.ylabel('Frequency of Disease or Not')
+    plt.show()
 
-# Instantiate the Decision Tree Classifier model
-dt_model = DecisionTreeClassifier()
+    plt.scatter(x=data.age[data.target == 1], y=data.thalach[data.target == 1], c='red')
+    plt.scatter(x=data.age[data.target == 0], y=data.thalach[data.target ==0], c ='green')
+    plt.title('thalach')
+    plt.xlabel('age')
+    plt.xticks(rotation=0)
+    plt.legend(["Have Disease", "Haven't Disease"])
+    plt.ylabel('heart rate')
+    plt.show()
 
-# Train the model on the training set
-dt_model.fit(X_train, Y_train)
+    plt.scatter(x=data.chol[data.target == 1], y=data.thalach[data.target == 1], c='red')
+    plt.scatter(x=data.chol[data.target == 0], y=data.thalach[data.target == 0], c='green')
+    plt.title('thalach / chol')
+    plt.xlabel('max heart rate')
+    plt.xticks(rotation=0)
+    plt.legend(["Have Disease", "Haven't Disease"])
+    plt.ylabel('chol (mg/dl)')
+    plt.show()
 
-# Make predictions on the training set
-X_train_preds_dt = dt_model.predict(X_train)
-training_accuracy_dt = accuracy_score(X_train_preds_dt, Y_train)
 
-# Print the training set accuracy for Decision Tree Classifier
-print('Accuracy DecisionTree: ', training_accuracy_dt)
 
-# Make predictions on the test set
-X_test_preds_dt = dt_model.predict(X_test)
-test_accuracy_dt = accuracy_score(X_test_preds_dt, Y_test)
 
-# Print the test set accuracy for Decision Tree Classifier
-print('Accuracy on DecisionTree test data : ', test_accuracy_dt)
+if __name__ == "__main__":
+    data, male, female = get_data(DATA_DIR)
+    
 
-# Print the classification report for Decision Tree Classifier
-print('Classification DecisionTree Report is: \n \n', classification_report(Y_test, X_test_preds_dt))
+    x_train, x_test, y_train, y_test, X, Y = create_sets(data)
+    train(x_train, x_test, y_train, y_test, X,Y, models)
 
-# Print the accuracy score for Decision Tree Classifier
-print('The accuracy score is:', accuracy_score(Y_test, X_test_preds_dt))
-
-# Print the confusion matrix for Decision Tree Classifier
-cm_dt = confusion_matrix(Y_test, X_test_preds_dt)
-print('\n Confusion matrix \n \n', cm_dt)
-
-# Print the classification report for Decision Tree Classifier
-print(classification_report(Y_test, X_test_preds_dt))
-
-# Plot the confusion matrix for Decision Tree Classifier using the old method
-#plot_confusion_matrix(dt_model, X_test, Y_test)
-plt.show()
-
-# Plot the confusion matrix for Decision Tree Classifier using the new method
-disp_dt = ConfusionMatrixDisplay(cm_dt, display_labels=dt_model.classes_)
-disp_dt.plot()
-plt.show()
-
-# Calculate and print the area under the ROC curve for Decision Tree Classifier
-roc_auc_dt = metrics.roc_auc_score(Y_test, X_test_preds_dt)
-print(roc_auc_dt)
-
-# Plot the ROC curve for Decision Tree Classifier
-plt.figure(figsize=(10, 8))
-probas_dt = dt_model.predict_proba(X_test)
-fpr_dt, tpr_dt, thresholds_dt = roc_curve(Y_test, probas_dt[:, 1])
-roc_auc_dt = auc(fpr_dt, tpr_dt)
-plt.plot(fpr_dt, tpr_dt, lw=1, label='ROC fold DecisionTree (area = %0.2f)' % (roc_auc_dt))
-plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Random')
-plt.xlim([-0.05, 1.05])
-plt.ylim([-0.05, 1.05])
-plt.xlabel('False Positive Rate DecisionTree')
-plt.ylabel('True Positive Rate DecisionTree')
-plt.title('Receiver operating characteristic example')
-plt.legend(loc="lower right")
-plt.show()
+    # plot(data)

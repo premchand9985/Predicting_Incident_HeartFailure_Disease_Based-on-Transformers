@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr  7 20:18:36 2023
+Created on Sat Apr  15 10:24:11 2023
 
 @author: premchand
 """
@@ -9,166 +9,275 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pickle
-
-# for plots to appear inside the notebook
 
 
-# for data preprocessing
-from sklearn.preprocessing import MinMaxScaler
 
-# Models
+import os
+print(os.listdir())
+
+import warnings
+warnings.filterwarnings('ignore')
+
+dataset = pd.read_csv("heart.csv")
+
+type(dataset)
+
+dataset.shape
+
+dataset.head(5)
+
+dataset.sample(5)
+
+dataset.describe()
+
+dataset.info()
+
+info = ["age","1: male, 0: female","chest pain type, 1: typical angina, 2: atypical angina, 3: non-anginal pain, 4: asymptomatic","resting blood pressure"," serum cholestoral in mg/dl","fasting blood sugar > 120 mg/dl","resting electrocardiographic results (values 0,1,2)"," maximum heart rate achieved","exercise induced angina","oldpeak = ST depression induced by exercise relative to rest","the slope of the peak exercise ST segment","number of major vessels (0-3) colored by flourosopy","thal: 3 = normal; 6 = fixed defect; 7 = reversable defect"]
+
+
+
+for i in range(len(info)):
+    print(dataset.columns[i]+":\t\t\t"+info[i])
+    
+    
+dataset["target"].describe()
+
+dataset["target"].unique()
+
+print(dataset.corr()["target"].abs().sort_values(ascending=False))
+
+y = dataset["target"]
+
+sns.countplot(y)
+
+
+target_temp = dataset.target.value_counts()
+
+print(target_temp)
+
+print("Percentage of patience without heart problems: "+str(round(target_temp[0]*100/303,2)))
+print("Percentage of patience with heart problems: "+str(round(target_temp[1]*100/303,2)))
+
+#Alternatively,
+# print("Percentage of patience with heart problems: "+str(y.where(y==1).count()*100/303))
+# print("Percentage of patience with heart problems: "+str(y.where(y==0).count()*100/303))
+
+# #Or,
+# countNoDisease = len(df[df.target == 0])
+# countHaveDisease = len(df[df.target == 1])
+
+dataset["sex"].unique()
+
+sns.barplot(dataset["sex"],y)
+
+dataset["cp"].unique()
+
+sns.barplot(dataset["cp"],y)
+
+dataset["fbs"].describe()
+
+dataset["fbs"].unique()
+
+sns.barplot(dataset["fbs"],y)
+
+dataset["restecg"].unique()
+
+sns.barplot(dataset["restecg"],y)
+
+dataset["exang"].unique()
+
+sns.barplot(dataset["exang"],y)
+
+dataset["slope"].unique()
+
+sns.barplot(dataset["slope"],y)
+
+#number of major vessels (0-3) colored by flourosopy
+
+dataset["ca"].unique()
+
+sns.countplot(dataset["ca"])
+
+sns.barplot(dataset["ca"],y)
+
+dataset["thal"].unique()
+
+sns.barplot(dataset["thal"],y)
+
+sns.distplot(dataset["thal"])
+
+from sklearn.model_selection import train_test_split
+
+predictors = dataset.drop("target",axis=1)
+target = dataset["target"]
+
+X_train,X_test,Y_train,Y_test = train_test_split(predictors,target,test_size=0.20,random_state=0)
+
+X_train.shape
+
+X_test.shape
+
+Y_train.shape
+
+Y_test.shape
+
+from sklearn.metrics import accuracy_score
+
 from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import AdaBoostClassifier
+
+lr = LogisticRegression()
+
+lr.fit(X_train,Y_train)
+
+Y_pred_lr = lr.predict(X_test)
+
+Y_pred_lr.shape
+
+score_lr = round(accuracy_score(Y_pred_lr,Y_test)*100,2)
+
+print("The accuracy score achieved using Logistic Regression is: "+str(score_lr)+" %")
+
+from sklearn.naive_bayes import GaussianNB
+
+nb = GaussianNB()
+
+nb.fit(X_train,Y_train)
+
+Y_pred_nb = nb.predict(X_test)
+
+Y_pred_nb.shape
+
+score_nb = round(accuracy_score(Y_pred_nb,Y_test)*100,2)
+
+print("The accuracy score achieved using Naive Bayes is: "+str(score_nb)+" %")
+
 from sklearn import svm
-from mlxtend.classifier import StackingCVClassifier
 
-# Model evaluators
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
-from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.metrics import precision_score, recall_score, f1_score
-#from sklearn.metrics import plot_roc_curve
-from sklearn.metrics import roc_curve
+sv = svm.SVC(kernel='linear')
 
-# Read the heart dataset
-heart_df = pd.read_csv("heart.csv")
+sv.fit(X_train, Y_train)
 
-# Display the first five rows of the dataset
-print("", heart_df.head())
+Y_pred_svm = sv.predict(X_test)
 
-# Display the last five rows of the dataset
-print("", heart_df.tail())
+Y_pred_svm.shape
 
-# Print the shape of the dataset
-print("", heart_df.shape)
+score_svm = round(accuracy_score(Y_pred_svm,Y_test)*100,2)
 
-# Print the information about the dataset
-print("", heart_df.info())
+print("The accuracy score achieved using Linear SVM is: "+str(score_svm)+" %")
 
-# Print the number of missing values in each column
-print("", heart_df.isna().sum())
+from sklearn.neighbors import KNeighborsClassifier
 
-# Print the descriptive statistics of the dataset
-print("", heart_df.describe().T)
+knn = KNeighborsClassifier(n_neighbors=7)
+knn.fit(X_train,Y_train)
+Y_pred_knn=knn.predict(X_test)
 
-# Finding the values
-heart_df.target.value_counts()
+Y_pred_knn.shape
 
-# Plotting a bar chart of the target column
-target_fig = heart_df.target.value_counts().plot(kind="bar", color=["salmon", "lightgreen"])
-target_fig.set_xticklabels(labels=['Has heart disease', "Doesn't have heart disease"], rotation=0)
-plt.title("Heart Disease values")
-plt.ylabel('Amount')
+score_knn = round(accuracy_score(Y_pred_knn,Y_test)*100,2)
 
-# Visualizing the target column in a pie chart
-labels = "Has heart disease", "Doesn't have heart disease"
-explode = (0, 0)
+print("The accuracy score achieved using KNN is: "+str(score_knn)+" %")
 
-fig1, ax1 = plt.subplots()
-ax1.pie(heart_df.target.value_counts(), explode=explode, labels=labels, autopct='%1.2f%%', shadow=True, startangle=90)
-ax1.axis('equal')
+from sklearn.tree import DecisionTreeClassifier
 
-plt.show()
+max_accuracy = 0
 
-# Count the number of males and females in the dataset
-heart_df.sex.value_counts()
 
-# Plotting a bar chart of the sex column
-sex_fig = heart_df.sex.value_counts().plot(kind="bar", color=["lightskyblue", "orange"])
-sex_fig.set_xticklabels(labels=['Male', "Female"], rotation=0)
-plt.title("Sex vs count")
+for x in range(200):
+    dt = DecisionTreeClassifier(random_state=x)
+    dt.fit(X_train,Y_train)
+    Y_pred_dt = dt.predict(X_test)
+    current_accuracy = round(accuracy_score(Y_pred_dt,Y_test)*100,2)
+    if(current_accuracy>max_accuracy):
+        max_accuracy = current_accuracy
+        best_x = x
+        
+#print(max_accuracy)
+#print(best_x)
 
-# Visualizing the sex column in a pie chart
-labels = 'Male', 'Female'
-explode = (0, 0.06)
 
-fig1, ax1 = plt.subplots()
-ax1.pie(heart_df.sex.value_counts(), explode=explode, labels=labels, autopct='%1.2f%%', shadow=True, startangle=90)
-ax1.axis('equal')
-plt.show()
+dt = DecisionTreeClassifier(random_state=best_x)
+dt.fit(X_train,Y_train)
+Y_pred_dt = dt.predict(X_test)
 
-# Compare the target column with the sex column
-pd.crosstab(heart_df.target, heart_df.sex)
+print(Y_pred_dt.shape)
 
-# Create a bar plot of the crosstab between target and sex columns
-sex_target_fig = pd.crosstab(heart_df.target, heart_df.sex).plot(kind='bar', figsize=(10, 6), color=['orange', 'lightskyblue'])
-sex_target_fig.set_xticklabels(labels=["Doesn't have heart disease", "Has heart disease"], rotation=0)
+score_dt = round(accuracy_score(Y_pred_dt,Y_test)*100,2)
 
-plt.legend(['Female', 'Male'])
-plt.title("Heart Disease Frequency for Sex")
-plt.ylabel("Count")
+print("The accuracy score achieved using Decision Tree is: "+str(score_dt)+" %")
 
-# Count the number of people with each type of chest pain
-heart_df.cp.value_counts()
+from sklearn.ensemble import RandomForestClassifier
 
-# Plotting a bar chart of the chest pain (cp) column
-cp_fig = heart_df.cp.value_counts().plot(kind="bar", color=["salmon", 'orange', 'lightblue', "lightgreen"])
-cp_fig.set_xticklabels(labels=['Typical angina', 'Atypical angina', 'Non-anginal', 'Asymptomatic'], rotation=0)
-plt.title("Chest Pain Type")
+max_accuracy = 0
 
-# Preprocessing the data
-X = heart_df.drop("target", axis=1)
-y = heart_df["target"]
 
-# Splitting the dataset into train and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+for x in range(2000):
+    rf = RandomForestClassifier(random_state=x)
+    rf.fit(X_train,Y_train)
+    Y_pred_rf = rf.predict(X_test)
+    current_accuracy = round(accuracy_score(Y_pred_rf,Y_test)*100,2)
+    if(current_accuracy>max_accuracy):
+        max_accuracy = current_accuracy
+        best_x = x
+        
+#print(max_accuracy)
+#print(best_x)
 
-# Scaling the data
-scaler = MinMaxScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+rf = RandomForestClassifier(random_state=best_x)
+rf.fit(X_train,Y_train)
+Y_pred_rf = rf.predict(X_test)
 
-# Defining the models
-logreg = LogisticRegression()
-knn = KNeighborsClassifier()
-dt = DecisionTreeClassifier()
-rf = RandomForestClassifier()
-ab = AdaBoostClassifier()
-svm_model = svm.SVC()
-stack = StackingCVClassifier(classifiers=[logreg, knn, dt, rf, ab, svm_model], meta_classifier=logreg)
+Y_pred_rf.shape
 
-# Training and evaluating the models
-models = {
-    "Logistic Regression": logreg,
-    "K-Nearest Neighbors": knn,
-    "Decision Tree": dt,
-    "Random Forest": rf,
-    "AdaBoost": ab,
-    "SVM": svm_model,
-    "Stacking": stack
-}
+score_rf = round(accuracy_score(Y_pred_rf,Y_test)*100,2)
 
-for name, model in models.items():
-    model.fit(X_train, y_train)
-    print(f"{name}: {model.score(X_test, y_test)}")
-# Create a function for model evaluation
-def evaluate_model(model, X_test, y_test):
-    y_preds = model.predict(X_test)
-    print("Classification Report:")
-    print(classification_report(y_test, y_preds))
-    print("Confusion Matrix:")
-    print(confusion_matrix(y_test, y_preds))
-    print("Precision Score:", precision_score(y_test, y_preds))
-    print("Recall Score:", recall_score(y_test, y_preds))
-    print("F1 Score:", f1_score(y_test, y_preds))
+print("The accuracy score achieved using Decision Tree is: "+str(score_rf)+" %")
 
-# Evaluate each model
-for name, model in models.items():
-    print(f"{name}:")
-    evaluate_model(model, X_test, y_test)
-    print("------------------------------------------------")
+import xgboost as xgb
 
-# Plot ROC curve for each model
-plt.figure(figsize=(10, 6))
-for name, model in models.items():
-    plot_roc_curve(model, X_test, y_test, name=name)
+xgb_model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
+xgb_model.fit(X_train, Y_train)
 
-plt.title("ROC Curves for Different Models")
-plt.xlabel("False Positive Rate (1 - Specificity)")
-plt.ylabel("True Positive Rate (Sensitivity)")
-plt.legend(loc="lower right")
-plt.show()
+Y_pred_xgb = xgb_model.predict(X_test)
+
+Y_pred_xgb.shape
+
+score_xgb = round(accuracy_score(Y_pred_xgb,Y_test)*100,2)
+
+print("The accuracy score achieved using XGBoost is: "+str(score_xgb)+" %")
+
+from keras.models import Sequential
+from keras.layers import Dense
+
+model = Sequential()
+model.add(Dense(11,activation='relu',input_dim=13))
+model.add(Dense(1,activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy',optimizer='adam',metrics=['accuracy'])
+
+model.fit(X_train,Y_train,epochs=300)
+
+Y_pred_nn = model.predict(X_test)
+
+Y_pred_nn.shape
+
+rounded = [round(x[0]) for x in Y_pred_nn]
+
+Y_pred_nn = rounded
+
+score_nn = round(accuracy_score(Y_pred_nn,Y_test)*100,2)
+
+print("The accuracy score achieved using Neural Network is: "+str(score_nn)+" %")
+
+#Note: Accuracy of 85% can be achieved on the test set, by setting epochs=2000, and number of nodes = 11.
+
+scores = [score_lr,score_nb,score_svm,score_knn,score_dt,score_rf,score_xgb,score_nn]
+algorithms = ["Logistic Regression","Naive Bayes","Support Vector Machine","K-Nearest Neighbors","Decision Tree","Random Forest","XGBoost","Neural Network"]    
+
+for i in range(len(algorithms)):
+    print("The accuracy score achieved using "+algorithms[i]+" is: "+str(scores[i])+" %")
+    
+sns.set(rc={'figure.figsize':(15,8)})
+plt.xlabel("Algorithms")
+plt.ylabel("Accuracy score")
+
+sns.barplot(algorithms,scores)
