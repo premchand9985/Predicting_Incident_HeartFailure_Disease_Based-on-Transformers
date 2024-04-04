@@ -57,22 +57,22 @@ Develop a sophisticated neural network using Keras and TensorFlow tailored for h
 
 ## Toolkit Components:
 
-1. Heart Disease Analyzer:
+### Heart Disease Analyzer:
 
 - Conducts in-depth exploratory data analysis on the heart disease dataset, visualizing correlations, distributions, and patterns within the data.
 - Trains and evaluates machine learning models, including Random Forest, Logistic Regression, and Naive Bayes, for heart disease prediction.
 
-2. Heart Disease Predictor:
+### Heart Disease Predictor:
 
 - Implements various machine learning algorithms, including Logistic Regression, Naive Bayes, Support Vector Machine, Decision Tree, Random Forest, XGBoost, and a Neural Network, for heart disease prediction.
 - Evaluates model performance using accuracy scores and cross-validation techniques.
 
-3. Heart Disease ML Assistant:
+### Heart Disease ML Assistant:
 
 - Contains functions for data preprocessing, visualization, and machine learning model training.
 - Offers capabilities to preprocess the heart disease dataset, train machine learning models, and evaluate their performance.
 
-4. Heart Disease Neural Navigator:
+### Heart Disease Neural Navigator:
 
 - Utilizes advanced deep learning techniques to predict heart disease, constructing a powerful neural network model using Keras and TensorFlow.
 - Encompasses comprehensive preprocessing, normalization, model architecture setup, intensive training, and meticulous evaluation of the deep learning model.
