@@ -78,6 +78,12 @@ Develop a sophisticated neural network using Keras and TensorFlow tailored for h
 - Encompasses comprehensive preprocessing, normalization, model architecture setup, intensive training, and meticulous evaluation of the deep learning model.
 
 
+## How to Use:
+- Clone this repository to your local machine.
+- Ensure you have the necessary dependencies installed, which are specified in the requirements.txt file.
+- Execute the appropriate scripts based on your preferred analysis technique.
+- Follow the instructions provided within each script to preprocess the data, train the models, and evaluate their performance.
+
 
 ## Results
 - The accuracy scores of different algorithms are plotted in a bar chart to visualize the performance of each model.
